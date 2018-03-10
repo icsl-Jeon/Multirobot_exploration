@@ -52,7 +52,7 @@
     <remap from="camera_info" to="camera/depth/camera_info"/>
     <!--careful!! remapping to /scan makes itself as global!!-->
     <!--You know,... but now I need that!!-->
-	<remap from="scan" to="scan"/>
+	<remap from="scan" to="/scan"/>
   </node>
 
 </group>
@@ -90,15 +90,21 @@
     <remap from="image" to="camera/depth/image_raw"/>
     <remap from="camera_info" to="camera/depth/camera_info"/>
     <!--careful!! remapping to /scan makes itself as global!!-->
-    <remap from="scan" to="scan"/>
+    <remap from="scan" to="/scan"/>
   </node>
   </group>
 
-
+ <!-- laser scan data merger -->
   <node type="laser_scan_assembler" pkg="laser_assembler" name="my_assembler">
    <remap from="scan" to="scan"/>
    <param name="max_scans" type="int" value="400" />
-   <param name="fixed_frame" type="string" value="map" />
+   <param name="fixed_frame" type="string" value="/map" />
 </node>
+   <node type="periodic_snapshotter" pkg="laser_assembler" name="periodic_service_caller">
+   <param name="buffer_duration_sec" type="int" value="2"/>
+   <param name="buffer_duration_nsec" type="int" value="0"/>
+   </node>
+
+
 
 </launch>
