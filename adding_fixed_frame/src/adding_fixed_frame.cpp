@@ -23,8 +23,9 @@ void odomCallback(const nav_msgs::OdometryConstPtr &odom_msg){
     odom_msg->pose.pose.orientation.y,odom_msg->pose.pose.orientation.z ,odom_msg->pose.pose.orientation.w);
     transform.setRotation(q);
     ROS_INFO("sending transform.\n");
-    br.sendTransform(tf::StampedTransform(transform,ros::Time::now(),
-    "map",robot_name+"/odom"));
+    // caution ! sendtransform is diffrent. it is all global
+	br.sendTransform(tf::StampedTransform(transform,ros::Time::now(),
+    "/map",robot_name+"/odom"));
 };
 int main(int argc, char **argv){
     ros::init(argc,argv,"mybot_tf_broadcaster");
@@ -32,7 +33,7 @@ int main(int argc, char **argv){
     robot_name=argv[1];
     ROS_INFO("strat node\n");
     ros::NodeHandle node;
-    ros::Subscriber sub=node.subscribe(robot_name+"/odom",10,&odomCallback);
+    ros::Subscriber sub=node.subscribe("odom",10,&odomCallback);
     ros::spin();
    
     return 0;
