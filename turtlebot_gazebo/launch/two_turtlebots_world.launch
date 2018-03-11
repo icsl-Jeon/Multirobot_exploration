@@ -95,7 +95,7 @@
   </group>
 
  <!-- laser scan data merger -->
-  <node type="laser_scan_assembler" pkg="laser_assembler" name="my_assembler">
+  <!--node type="laser_scan_assembler" pkg="laser_assembler" name="my_assembler">
    <remap from="scan" to="scan"/>
    <param name="max_scans" type="int" value="400" />
    <param name="fixed_frame" type="string" value="/map" />
@@ -103,8 +103,32 @@
    <node type="periodic_snapshotter" pkg="laser_assembler" name="periodic_service_caller">
    <param name="buffer_duration_sec" type="int" value="2"/>
    <param name="buffer_duration_nsec" type="int" value="0"/>
-   </node>
+   </node-->
+
+ <!--point cloud merger-->
+ <node type="pcl2_merger_node" pkg="pcl2_merger" name="pcl2_merger" />
+
+ <!--octomap server -->
+ <node pkg="octomap_server" type="octomap_tracking_server_node" name="octomap_talker" output="screen">	
+ 		
+ 		<param name="resolution" value="0.05" />
+		<param name="frame_id" type="string" value="/map" />
+		<param name="sensor_model/max_range" value="3.0" />
+		<param name="track_changes" value="true"/>
+		<param name="listen_changes" value="false"/>
+		<param name="topic_changes" value="/octomap_tracking_server/changeset" />
+		<param name="sensor_model/hit" value=" " />	
+		<param name="sensor_model/miss" value=" " />	
+		<param name="sensor_model/min" value=" " />	
+		<param name="sensor_model/max" value=" " />
 
 
+    <param name="change_id_frame" value=" " />
+    <remap from="cloud_in" to="/merged_points" />
+ 
+ </node>
+ 
+ 
 
 </launch>
+
