@@ -128,6 +128,8 @@
  
  </node>
  
+   <!--rviz-->
+   <node name="rviz" pkg="rviz" type="rviz" args="args=-d $(find turtlebot_gazebo)/rviz/two_turtlebot_bringingup.rviz"/>
  
 
 </launch>

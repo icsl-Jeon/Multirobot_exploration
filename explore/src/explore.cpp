@@ -38,7 +38,7 @@
 #include <explore/explore.h>
 
 #include <thread>
-
+// are the two points close enough ?
 inline static bool operator==(const geometry_msgs::Point& one,
                               const geometry_msgs::Point& two)
 {
@@ -48,12 +48,17 @@ inline static bool operator==(const geometry_msgs::Point& one,
   return dist < 0.01;
 }
 
+// using namespace statement : don't need to put explore:: to every line 
+
 namespace explore
 {
+// constructor 
+// as I can see, for members that can be init easily, just do with ":"
+// and for other ones, init by param statement
 Explore::Explore()
   : private_nh_("~")
   , tf_listener_(ros::Duration(10.0))
-  , costmap_client_(private_nh_, relative_nh_, &tf_listener_)
+  , costmap_client_(private_nh_, relative_nh_, &tf_listener_) // subscription to /projected_map and update
   , move_base_client_("move_base")
   , prev_distance_(0)
   , last_markers_count_(0)
@@ -63,12 +68,12 @@ Explore::Explore()
   private_nh_.param("planner_frequency", planner_frequency_, 1.0);
   private_nh_.param("progress_timeout", timeout, 30.0);
   progress_timeout_ = ros::Duration(timeout);
-  private_nh_.param("visualize", visualize_, false);
+  private_nh_.param("visualize", visualize_, true);
   private_nh_.param("potential_scale", potential_scale_, 1e-3);
   private_nh_.param("orientation_scale", orientation_scale_, 0.0);
   private_nh_.param("gain_scale", gain_scale_, 1.0);
   private_nh_.param("min_frontier_size", min_frontier_size, 0.5);
-
+//what are they? potential scale, gain scale? , anyway, getCostmap() gives pointer to the data array 
   search_ = frontier_exploration::FrontierSearch(costmap_client_.getCostmap(),
                                                  potential_scale_, gain_scale_,
                                                  min_frontier_size);
@@ -81,7 +86,7 @@ Explore::Explore()
   ROS_INFO("Waiting to connect to move_base server");
   move_base_client_.waitForServer();
   ROS_INFO("Connected to move_base server");
-
+  // timer ? 
   exploring_timer_ =
       relative_nh_.createTimer(ros::Duration(1. / planner_frequency_),
                                [this](const ros::TimerEvent&) { makePlan(); });
@@ -89,7 +94,8 @@ Explore::Explore()
 
 Explore::~Explore()
 {
-  stop();
+//is it defined? 
+stop();
 }
 
 void Explore::visualizeFrontiers(
@@ -128,13 +134,16 @@ void Explore::visualizeFrontiers(
   m.color.a = 255;
   // lives forever
   m.lifetime = ros::Duration(0);
-  m.frame_locked = true;
+  // lock = lives forever? 
+m.frame_locked = true;
+
 
   // weighted frontiers are always sorted
   double min_cost = frontiers.empty() ? 0. : frontiers.front().cost;
 
   m.action = visualization_msgs::Marker::ADD;
   size_t id = 0;
+  // in C++ 11, it is same with iterator 
   for (auto& frontier : frontiers) {
     m.type = visualization_msgs::Marker::POINTS;
     m.id = int(id);
@@ -175,7 +184,7 @@ void Explore::visualizeFrontiers(
   last_markers_count_ = current_markers_count;
   marker_array_publisher_.publish(markers_msg);
 }
-
+// need to figure out when this is called 
 void Explore::makePlan()
 {
   // find frontiers
