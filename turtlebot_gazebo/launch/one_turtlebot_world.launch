@@ -79,7 +79,7 @@
 		<param name="listen_changes" value="false"/>
 		<param name="topic_changes" value="/octomap_tracking_server/changeset" />
 		<param name="sensor_model/hit" value=" " />	
-		<param name="sensor_model/miss" value=" " />	
+		<param name="sensor_model/miss" value="0.4 " />	
 		<param name="sensor_model/min" value=" " />	
 		<param name="sensor_model/max" value=" " />
 		<param name="filter_ground" value="true"/>
