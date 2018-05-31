@@ -21,7 +21,7 @@ class agent:
 
 
 class task:
-    def __init__(self, x, y, z, duration, idx=0, task_type=0, start_t=0, end_t=100, discount=0.1, task_value=10):
+    def __init__(self, x, y, z, duration, idx=0, task_type=0, start_t=0, end_t=100, discount=0.1, task_value=100):
         self.idx = idx
         self.type = task_type
         self.x = x
@@ -45,23 +45,23 @@ class CBBA:
         self.Nt = len(self.task_list)
         self.Lt = Lt  # maximum number of task to an agent
         # TODO FOR USER
-        self.CM = np.zeros(len(AGENT_TYPE), len(TASK_TYPE))  # compatibility matrix
+        self.CM = np.zeros((len(AGENT_TYPE), len(TASK_TYPE)))  # compatibility matrix
         self.CM[0, 0] = 1
         self.CM[1, 1] = 1
-        self.update_T = np.zeros(self.Nu, self.Nu)  # Nt x Nt matrix whose element : update time
+        self.update_T = np.zeros((self.Nu, self.Nu))  # Nt x Nt matrix whose element : update time
         # --------- CBBA Data ------------
-        self.bids = -np.ones(self.Nu, self.Nt)  # my bidding
-        self.winners = -np.ones(self.Nu, self.Nt)  # whom does each agent regard as winner? (Z)
-        self.winnerBids = -np.ones(self.Nu, self.Nt)  # bidding of winner (Y)
+        self.bids = -np.ones((self.Nu, self.Nt))  # my bidding
+        self.winners = -np.ones((self.Nu, self.Nt),dtype=int)  # whom does each agent regard as winner? (Z)
+        self.winnerBids = -np.ones((self.Nu, self.Nt))  # bidding of winner (Y)
 
-        self.path = -np.ones(self.Nu, self.Nt)
-        self.bundle = -np.ones(self.Nu, self.Nt)
-        self.times = -np.ones(self.Nu, Lt)
-        self.scores = -np.ones(self.Nu, Lt)
+        self.path = -np.ones((self.Nu, self.Nt),dtype=int)
+        self.bundle = -np.ones((self.Nu, self.Nt),dtype=int)
+        self.times = -np.ones((self.Nu, Lt))
+        self.scores = -np.ones((self.Nu, Lt))
 
 
 
-    def insert(oldList, value, index):
+    def insert(self,oldList, value, index):
         # -------- ARGUMENTS ------------
         ## INPUT
         # oldList : original list. empty loc was assigned -1
@@ -70,23 +70,38 @@ class CBBA:
 
         ## OUTPUT
         # newList
+        try:
+            index=int(index)
+        except TypeError:
+            print('why tuple')
 
-        newList = -np.ones(1, len(oldList))
-        newList[0:index - 1] = oldList[0:index - 1]
-        newList[index] = value
-        newList[index + 1:] = oldList[index:-1]  # I don't know why -1...
+        newList = -np.ones(len(oldList))
+        if not index==0:
+            newList[0:index] = oldList[0:index]
+            newList[index] = value
+            newList[index + 1:] = oldList[index:-1]  # I don't know why -1...
+        else:
+            newList[0]=value
+            newList[1:]=oldList[0:-1]
 
         return newList
 
-    def remove(oldList, index):
-        newList = -np.ones(1, len(oldList))
-        newList[0:index - 1] = oldList[0:index - 1]
-        newList[index:-1] = oldList[index:]
+    def remove(self,oldList, index):
+
+        try:
+            index=int(index)
+        except TypeError:
+            print('why tuple')
+
+        newList = -np.ones(len(oldList))
+        newList[0:index] = oldList[0:index]
+        newList[index:-1] = oldList[index+1:]
 
         return newList
 
     def computeBids(self, agent_idx, feasibility):
 
+        agent_idx=int(agent_idx)
         # -------- ARGUMENTS ------------
 
         ## INPUT
@@ -110,19 +125,20 @@ class CBBA:
         if isFull:
             return
 
-        bids = np.zeros(1, self.Nt)  # bids of current agent
-        bestIdxs = -np.ones(1, self.Nt)  # best position of each task
-        taskTimes = -np.ones(1, self.Nt)  # best exe time of each task
+        bids = np.zeros(self.Nt)  # bids of current agent
+        bestIdxs = -np.ones((self.Nt))  # best position of each task
+        taskTimes = -np.ones(( self.Nt))  # best exe time of each task
+
         cur_agent=self.agent_list[agent_idx]
         # for each task
         for m in range(self.Nt):
             # Check the compatibility
-            if self.CM[cur_agent.agent_type, self.task_list[m].type]:
+            if self.CM[cur_agent.type, self.task_list[m].type]:
                 # Check to make sure the path doesn't already contain task m
-                if np.empty(np.where(self.path[agent_idx, 0:available_idx[0] - 1] == m)):
+                if not len(np.where(self.path[agent_idx, 0:available_idx[0] ] == m)[0]):
                     # Find the best score attainable by inserting the score into the current path
-                    bestBid = 0;
-                    bestIndex = -1;
+                    bestBid = 0
+                    bestIndex = -1
                     bestTime = -1
 
                     # Try inserting task m in location j among []other tasks and see if it generates a better new_path.
@@ -131,15 +147,15 @@ class CBBA:
                             skip = False
 
                             if j == 0:  # insert at the beginning
-                                taskPrev = []
-                                timePrev = []
+                                taskPrev = None
+                                timePrev = None
                             else:
                                 taskPrev = self.task_list[self.path[agent_idx, j - 1]]
                                 timePrev = self.times[agent_idx, j - 1]
 
                             if j == available_idx[0]:  # insert at the end
-                                taskNext = []
-                                timeNext = []
+                                taskNext = None
+                                timeNext = None
                             else:
                                 taskNext = self.task_list[self.path[agent_idx, j]]
                                 timeNext = self.times[agent_idx, j]
@@ -147,8 +163,8 @@ class CBBA:
                             outarg = self.CalcScore(agent_idx, self.task_list[m], taskPrev, timePrev, taskNext,
                                                     timeNext)
                             if len(outarg):  # normal  output
-                                score = outarg[0];
-                                minStart = outarg[1];
+                                score = outarg[0]
+                                minStart = outarg[1]
                                 maxStart = outarg[2]
                                 if minStart > maxStart:
                                     skip = True
@@ -182,7 +198,7 @@ class CBBA:
         cur_agent = self.agent_list[agent_idx]
 
         if np.size(np.where(AGENT_TYPE == cur_agent.type)[0]):
-            if np.empty(taskPrev):  # first task in path
+            if (taskPrev==None):  # first task in path
                 # compute start time of the task
                 dt = np.sqrt(np.power(cur_agent.x - taskCur.x, 2) +
                              np.power(cur_agent.y - taskCur.y, 2) +
@@ -195,7 +211,7 @@ class CBBA:
                              np.power(taskPrev.z - taskCur.z, 2)) / cur_agent.nom_vel
                 minStart = max(taskCur.start_t, timePrev + taskPrev.duration + dt)
 
-            if np.empty(taskNext):  # last task in path
+            if (taskNext==None):  # last task in path
                 maxStart = taskCur.end_t
             else:
                 dt = np.sqrt(np.power(taskNext.x - taskCur.x, 2) +
@@ -222,10 +238,9 @@ class CBBA:
             print ('unknown agent type')
             return ()
 
-    def bundle(self, agent_idx):
+    def bundle_update(self, agent_idx):
         # Update bundles after messaging to drop tasks that are outbid
         self.bundleRemove(agent_idx)
-
         # Bid on new tasks and add them to the bundle
         newBid = self.bundleAdd(agent_idx)
 
@@ -249,17 +264,18 @@ class CBBA:
 
         newBid = 0  #
         eps = 1e-6
-        cur_agent = self.agents[agent_idx]
+        cur_agent = self.agent_list[agent_idx]
 
         # check if bundle is full
         isFull = np.where(self.bundle[agent_idx] == -1)[0].size == 0
         # initialize feasible matrix (to keep track of which j locations can be pruned)
-        feasibility = np.ones(self.Nt, self.Lt + 1)
+        feasibility = np.ones((self.Nt, self.Lt + 1))
 
         while not isFull:  # numel(bi) < Lt
             outarg = self.computeBids(agent_idx, feasibility)
-            bestIdxs = outarg[0];
-            taskTimes = outarg[1];
+            bestIdxs = outarg[0]
+            bestIdxs=bestIdxs.astype(int)
+            taskTimes = outarg[1]
             feasibility = outarg[2]
 
             # determine available assignments
@@ -295,8 +311,7 @@ class CBBA:
 
                 self.path[agent_idx] = self.insert(self.path[agent_idx], bestTask, bestIdxs[bestTask])
                 self.times[agent_idx] = self.insert(self.times[agent_idx], taskTimes[bestTask], bestIdxs[bestTask])
-                self.scores[agent_idx] = self.insert(self.scores[agent_idx], self.bids[agent_idx, bestTask],
-                                                     bestIdxs[bestTask])
+                self.scores[agent_idx] = self.insert(self.scores[agent_idx], self.bids[agent_idx, bestTask],bestIdxs[bestTask])
 
                 # insert task to bundle
                 insert_loc = len(np.where(self.bundle[agent_idx] > -1)[0])
@@ -304,7 +319,7 @@ class CBBA:
 
                 # update feasibility
                 for i in range(self.Nt):
-                    feasibility[i, :] = self.insert(feasibility[i, :], feasibility[i, bestIdxs[bestTask]])
+                    feasibility[i, :] =np.copy(self.insert(feasibility[i, :], feasibility[i, bestIdxs[bestTask]],bestIdxs[bestTask]))
 
             else:  # nothing to bid
                 break
@@ -326,7 +341,7 @@ class CBBA:
         ####################################
 
         # Update after communication. for the outbid agents, release from bundles
-        outbidForTask = 0;
+        outbidForTask = 0
 
         for j in range(self.Lt):
             if self.bundle[agent_idx, j] < 0:
@@ -340,14 +355,15 @@ class CBBA:
                         self.winners[agent_idx, self.bundle[agent_idx, j]] = -1
                         self.winnerBids[agent_idx, self.bundle[agent_idx, j]] = -1
 
-                        # Clear from path and times vectors and remove from bindle
-                        idx = np.where(self.path[agent_idx] == self.bundle[agent_idx, j])
-
+                    # Clear from path and times vectors and remove from bundle
+                    idx = np.where(self.path[agent_idx] == self.bundle[agent_idx, j])[0]
+                    # fuck! idx could have been empty.
+                    if len(idx):
                         self.path[agent_idx] = self.remove(self.path[agent_idx], idx)
                         self.times[agent_idx] = self.remove(self.times[agent_idx], idx)
                         self.scores[agent_idx] = self.remove(self.scores[agent_idx], idx)
 
-                        self.bundle[agent_idx, j] = -1
+                    self.bundle[agent_idx, j] = -1
 
     def consensus(self, update_time):
         # update_time : iteration step
@@ -464,8 +480,8 @@ class CBBA:
                             # Entry 11: Update or Leave
                             elif Z[i, j] == old_Z[k, j]:  # same guess
                                 if old_t[k, old_Z[k, j]] > self.update_T[i, old_Z[k, j]]:
-                                    Z[i, j] = self.old_Z[k, j]  # redundant operation
-                                    Y[i, j] = self.old_Y[k, j]
+                                    Z[i, j] = old_Z[k, j]  # redundant operation
+                                    Y[i, j] = old_Y[k, j]
 
                             # Entry 12: Update, Reset or Leave
                             elif Z[i, j] > -1:  # different guess about 3rd agent
@@ -488,7 +504,7 @@ class CBBA:
                                             Y[i, j] = old_Y[k, j]
                                         # Equal score
                                         elif np.abs(old_Y[k, j] - Y[i, j]) < eps:
-                                            if self.winner[i, j] > old_Z[k, j]:
+                                            if self.winners[i, j] > old_Z[k, j]:
                                                 Z[i, j] = old_Z[k, j]
                                                 Y[i, j] = old_Y[k, j]
 

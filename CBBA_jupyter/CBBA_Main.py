@@ -5,12 +5,13 @@ def CBBA_main(agents,tasks,Lt,connectivity_graph):
     # TODO FOR USER : CM (COMPATIBILITY MATRIX) IN CLASS CBBA
 
     # this costructor includes all the initilization
-    cbba=CBBA(agent,tasks,Lt,connectivity_graph)
+    cbba=CBBA(agents,tasks,Lt,connectivity_graph)
     T=1 # current iteration
     lastTime=T-1 # time when something changed
     doneFlag=0
 
     while doneFlag==0:
+        print('current interation :{} '.format(T))
         # -------------------
         # 1. COMMUNICATE
         # -------------------
@@ -21,7 +22,7 @@ def CBBA_main(agents,tasks,Lt,connectivity_graph):
         # --------------------------
 
         for n in range(cbba.Nu):
-            newBid=cbba.bundle(n)
+            newBid=cbba.bundle_update(n)
             if newBid:
                 lastTime=T
 
@@ -49,5 +50,5 @@ def CBBA_main(agents,tasks,Lt,connectivity_graph):
             else :
                 break
 
-
-
+    print ('total score : {}'.format(total_score))
+    return cbba
