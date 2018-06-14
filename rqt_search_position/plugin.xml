@@ -1,0 +1,20 @@
+<library path="librqt_search_position">
+  <class name="rqt_search_position/SearchPositionPlugin" type="rqt_search_position::SearchPositionPlugin" base_class_type="rqt_gui_cpp::Plugin">
+    <description>
+      An example C++ GUI plugin to create a great user interface.
+    </description>
+    <qtgui>
+      <!-- optional grouping...
+      <group>
+        <label>Group</label>
+      </group>
+      <group>
+        <label>Subgroup</label>
+      </group>
+      -->
+      <label>Search Position Plugin</label>
+      <icon type="theme">system-help</icon>
+      <statustip>Great user interface to provide real value.</statustip>
+    </qtgui>
+  </class>
+</library>

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>kiro_gui_msgs</name>
+  <version>1.0.0</version>
+  <description>
+    Message and service types for kiro gui
+  </description>
+  <license>Apache 2.0</license>
+
+  <author email="kmyang@kiro.re.kr">Yang</author>
+
+  <maintainer email="kmyang@kiro.re.kr">Yang</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <build_depend>message_generation</build_depend>
+  <build_export_depend>message_runtime</build_export_depend>
+  <exec_depend>message_runtime</exec_depend>
+</package>
