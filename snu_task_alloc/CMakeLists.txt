@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(CBBA)
+project(snu_task_alloc)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -11,6 +11,9 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   rospy
   keyboard
+  std_msgs
+  message_generation
+
 )
 
 ## System dependencies are found with CMake's conventions
@@ -56,7 +59,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
-	AllocateTask.srv
+   AllocateTask.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -67,10 +70,11 @@ add_service_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs
-# )
+ generate_messages(
+   DEPENDENCIES
+   geometry_msgs
+   std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -102,10 +106,10 @@ add_service_files(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES CBBA
-#  CATKIN_DEPENDS geometry_msgs rospy
-#  DEPENDS system_lib
+
+  LIBRARIES snu_task_alloc
+  CATKIN_DEPENDS geometry_msgs rospy message_generation
+  DEPENDS system_lib
 )
 
 ###########

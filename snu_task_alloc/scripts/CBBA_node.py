@@ -6,10 +6,11 @@ from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 from visualization_msgs.msg import *
 from kiro_gui_msgs.msg import PositionArray
-from CBBA.srv import *
+from snu_task_alloc.srv import AllocateTask
 from CBBA_Main import *
 import numpy as np
 import tf
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Pose
 
 
@@ -54,14 +55,17 @@ agent_pos.append(pose.position)
 ##############################
 
 allocated_paths=[] # array of Navmsg.Path
+path_pubs=[] # array of path publisher
 
 
-'''CBBA computation '''
+'''CBBA computation and path generation '''
 
 def allocate_path():
     global isTask,isAgents,isSolve, allocated_paths
+    global search_pos,agent_pos
     allocated_paths=[]
     if isTask and isAgents:
+        rospy.loginfo("num of search pos: %d  / agent pos %d",len(search_pos),len(agent_pos))
         cbba=CBBA_solve(search_pos,agent_pos)
         # Path extraction & parsing
         cbba_path=cbba.path
@@ -70,37 +74,76 @@ def allocate_path():
         for i in range(cbba.Nu):
             # path of this agent
             path=Path()
+            path.header.frame_id="map"
 
             # Firstly, we put the position of agent
             # TODO how about making a function for this procedure?
-            pose = Pose()
-            pose.position.x=cbba.agent_list[i].x
-            pose.position.y = cbba.agent_list[i].y
-            pose.position.z = cbba.agent_list[i].z
-            path.poses.append(pose)
+            pose_stamp = PoseStamped()
+            pose_stamp.header.frame_id="map"
+            pose_stamp.pose.position.x=cbba.agent_list[i].x
+            pose_stamp.pose.position.y = cbba.agent_list[i].y
+            pose_stamp.pose.position.z = cbba.agent_list[i].z
+            path.poses.append(pose_stamp)
 
 
             # Secondly, we put the task position of the path
             for j in range(cbba.Nt):
                 if not cbba_path[i,j] == -1:
-                    pose=Pose()
-                    pose.position.x = cbba.task_list[cbba_path[i,j]].x
-                    pose.position.y = cbba.task_list[cbba_path[i,j]].y
-                    pose.position.z = cbba.task_list[cbba_path[i,j]].z
-                    path.poses.append(pose)
+                    pose_stamp=PoseStamped()
+                    pose_stamp.header.frame_id = "map"
+                    pose_stamp.pose.position.x = cbba.task_list[cbba_path[i,j]].x
+                    pose_stamp.pose.position.y = cbba.task_list[cbba_path[i,j]].y
+                    pose_stamp.pose.position.z = cbba.task_list[cbba_path[i,j]].z
+                    path.poses.append(pose_stamp)
 
             allocated_paths.append(path)
 
-        return allocated_paths
     else:
         rospy.logwarn('task or agents are not provided')
-        return allocated_paths
+
+'''construct array of path publisher'''
+
+for i in range(Nu):
+    topic_name="allocation_path"+str(i)
+    path_pub=rospy.Publisher(topic_name,Path,queue_size=1)
+    path_pubs.append(path_pub)
 
 
+'''publish the path'''
+def paths_pub():
+    global allocated_paths,path_pub
+    # publish each path for agent
+    if len(allocated_paths) == Nu:
+        for i in range(Nu):
+            path=allocated_paths[i]
+            path_pubs[i].publish(path)
+
+
+''' calculation server registration'''
+
+def service_callback(req):
+    if req.calculate:
+        rospy.loginfo('calculating CBBA')
+        allocate_path()
+
+    else:
+        rospy.loginfo('calculation was not requested')
+
+    return True
+
+
+
+def CBBA_server():
+    s = rospy.Service('CBBA_allocate', AllocateTask,service_callback)
+
+
+######################################
+# task receiving / marker publishing #
+######################################
 
 '''search positions callback'''
 def sps_callback(data):
-    global search_pos
+    global search_pos,isTask
     search_pos=[]
     rospy.loginfo('received search position array')
     isTask=True
@@ -172,13 +215,14 @@ if __name__=='__main__':
     rospy.init_node('CBBA_node')
     rospy.loginfo("CBBA node started")
     task_receiver()
+    CBBA_server()
     br=tf.TransformBroadcaster()
     rate=rospy.Rate(30)
     # main loop
     while not rospy.is_shutdown():
         # search position marker
         marker_publish()
-        # CBBA solve ?
-
+        # send out path msg if any
+        paths_pub()
         rate.sleep()
 

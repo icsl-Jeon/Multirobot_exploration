@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <node name="search_position_gui" pkg="rqt_search_position" type="search_position.py"/>
+  <node name="CBBA_main" pkg="snu_task_alloc" type="CBBA_node.py" output="screen"/>
+
+
+
+  
+</launch>

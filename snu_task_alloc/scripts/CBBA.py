@@ -1,8 +1,8 @@
 import numpy as np
 
 # ---------- GLOBAL VARIABLE ----------------
-TASK_TYPE = [0, 1]  # type = {rover,quadrotor}
-AGENT_TYPE = [0, 1]  # type = {exploration,rescue}
+TASK_TYPE = np.array([0, 1])  # type = {rover,quadrotor}
+AGENT_TYPE = np.array([0, 1])  # type = {exploration,rescue}
 Lt = 3  # maximum number of task allocation
 
 
@@ -54,8 +54,8 @@ class CBBA:
         self.winners = -np.ones((self.Nu, self.Nt),dtype=int)  # whom does each agent regard as winner? (Z)
         self.winnerBids = -np.ones((self.Nu, self.Nt))  # bidding of winner (Y)
 
-        self.path = -np.ones((self.Nu, self.Nt),dtype=int)
-        self.bundle = -np.ones((self.Nu, self.Nt),dtype=int)
+        self.path = -np.ones((self.Nu, self.Lt),dtype=int)
+        self.bundle = -np.ones((self.Nu, self.Lt),dtype=int)
         self.times = -np.ones((self.Nu, Lt))
         self.scores = -np.ones((self.Nu, Lt))
 
@@ -194,9 +194,8 @@ class CBBA:
         # INPUT
         # agent_idx = int
         # taskCur, taskPrev, taskNext = task class
-
+        global AGENT_TYPE
         cur_agent = self.agent_list[agent_idx]
-
         if np.size(np.where(AGENT_TYPE == cur_agent.type)[0]):
             if (taskPrev==None):  # first task in path
                 # compute start time of the task

@@ -58,7 +58,8 @@ def CBBA_solve(task_positions,unit_positions):
     Nt=len(task_positions)
     Nu=len(unit_positions)
 
-    agent_list=[], task_list=[]
+    agent_list=[]
+    task_list=[]
     ##############
     # AGENT LIST #
     ##############
