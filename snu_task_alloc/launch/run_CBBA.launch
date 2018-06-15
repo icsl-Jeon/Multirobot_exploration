@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-
+  
   <node name="search_position_gui" pkg="rqt_search_position" type="search_position.py"/>
   <node name="CBBA_main" pkg="snu_task_alloc" type="CBBA_node.py" output="screen"/>
-
+  <!--map server-->
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find turtlebot3_navigation)/maps/map.yaml"/>
+  <!--rviz-->
+  <node name="rviz" pkg="rviz" type="rviz" args="args=-d $(find snu_task_alloc)/rviz/allocation_example.rviz"/>
 
 
   
 </launch>
+
+

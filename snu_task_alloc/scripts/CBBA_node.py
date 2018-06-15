@@ -26,6 +26,7 @@ listener=tf.TransformListener()
 
 # rviz marker
 search_pos_marker_pub = rospy.Publisher('/search_position_markers', MarkerArray, queue_size=1)
+agent_pos_marker_pub = rospy.Publisher('/agent_position_markers', MarkerArray, queue_size=1)
 
 
 ##################
@@ -156,7 +157,7 @@ def task_receiver():
 
 ''' marker pusblish / tf '''
 
-def marker_publish():
+def task_marker_publish():
     global search_pos
      # marker for search positions published
     pos_idx = 0
@@ -193,19 +194,67 @@ def marker_publish():
 ''' extract the tf for state of each robot '''
 # TODO still handling the exception error ....
 def state_receiver():
+
+    global tb0_pos,tb1_pos,tb2_pos
+    listener.waitForTransform('tb3_0/odom', 'map', rospy.Time(0),rospy.Duration(10))
+
     (trans0, rot0) = listener.lookupTransform('tb3_0/odom', 'map', rospy.Time(0))
     tb0_pos[0] = trans0[0]
     tb0_pos[1] = trans0[1]
     # rospy.loginfo('tb0 position: [%.4f, %.4f]', tb0_pos[0], tb0_pos[1])
+
+    listener.waitForTransform('tb3_1/odom', 'map', rospy.Time(0),rospy.Duration(10))
+
     (trans1, rot1) = listener.lookupTransform('tb3_1/odom', 'map', rospy.Time(0))
     tb1_pos[0] = trans1[0]
     tb1_pos[1] = trans1[1]
     # rospy.loginfo('tb1 position: [%.4f, %.4f]', tb1_pos[0], tb1_pos[1])
 
+    listener.waitForTransform('tb3_2/odom', 'map', rospy.Time(0),rospy.Duration(10))
     (trans2, rot2) = listener.lookupTransform('tb3_2/odom', 'map', rospy.Time(0))
     tb2_pos[0] = trans2[0]
     tb2_pos[1] = trans2[1]
     # rospy.loginfo('tb2 position: [%.4f, %.4f]', tb2_pos[0], tb2_pos[1])
+
+''' publish marker for the agents '''
+
+
+def agent_marker_publish():
+
+    global tb0_pos,tb1_pos,tb2_pos  # marker for search positions published
+    pos_idx = 0
+    marker_array = MarkerArray()
+    tb_poses=[tb0_pos , tb1_pos, tb2_pos] # position array
+
+    for i in range(Nu):
+        # visualization marker
+        marker = Marker()
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+        marker.header.frame_id = "map"
+        marker.header.stamp = rospy.Time.now()
+        marker.id = pos_idx
+        marker.lifetime = rospy.Duration()
+        marker.ns = 'agent_position'
+        scale = 0.5
+        marker.scale.x = scale
+        marker.scale.y = scale
+        marker.scale.z = scale
+        marker.pose.orientation.w = 1.0
+        marker.color.r = 1
+        marker.color.g = 0.1
+        marker.color.b = 1
+        marker.color.a = 0.5
+        marker.pose.position.x = tb_poses[i][0]
+        marker.pose.position.y = tb_poses[i][1]
+
+        marker_array.markers.append(marker)
+        # transform
+        pos_name = 'agent' + str(pos_idx)
+        br.sendTransform((tb_poses[i][0], tb_poses[i][1], 0.0), (0, 0, 0, 1), rospy.Time.now(), pos_name, 'map')
+        pos_idx += 1
+    search_pos_marker_pub.publish(marker_array)
+
 
 
 
@@ -220,8 +269,14 @@ if __name__=='__main__':
     rate=rospy.Rate(30)
     # main loop
     while not rospy.is_shutdown():
-        # search position marker
-        marker_publish()
+        '''
+        # robot state receiving
+        state_receiver()
+        '''
+
+        task_marker_publish()
+        agent_marker_publish()
+
         # send out path msg if any
         paths_pub()
         rate.sleep()
