@@ -60,6 +60,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
    FILES
    AllocateTask.srv
+   PathCompute.srv
  )
 
 ## Generate actions in the 'action' folder
