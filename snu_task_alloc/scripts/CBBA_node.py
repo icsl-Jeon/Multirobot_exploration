@@ -8,6 +8,7 @@ from visualization_msgs.msg import *
 from kiro_gui_msgs.msg import PositionArray
 from snu_task_alloc.srv import AllocateTask
 from CBBA_Main import *
+from path_node import *
 import numpy as np
 import tf
 from geometry_msgs.msg import PoseStamped
@@ -27,6 +28,12 @@ listener=tf.TransformListener()
 # rviz marker
 search_pos_marker_pub = rospy.Publisher('/search_position_markers', MarkerArray, queue_size=1)
 agent_pos_marker_pub = rospy.Publisher('/agent_position_markers', MarkerArray, queue_size=1)
+
+
+# A star instance
+inflate_rate = 0.3
+a_star=Astar(inflate_rate)
+
 
 
 ##################
@@ -61,13 +68,14 @@ path_pubs=[] # array of path publisher
 
 '''CBBA computation and path generation '''
 
-def allocate_path():
+def allocate_path(astar):
+
     global isTask,isAgents,isSolve, allocated_paths
     global search_pos,agent_pos
     allocated_paths=[]
     if isTask and isAgents:
         rospy.loginfo("num of search pos: %d  / agent pos %d",len(search_pos),len(agent_pos))
-        cbba=CBBA_solve(search_pos,agent_pos)
+        cbba=CBBA_solve(search_pos,agent_pos,astar)
         # Path extraction & parsing
         cbba_path=cbba.path
 
@@ -97,7 +105,30 @@ def allocate_path():
                     pose_stamp.pose.position.z = cbba.task_list[cbba_path[i,j]].z
                     path.poses.append(pose_stamp)
 
-            allocated_paths.append(path)
+
+
+            # Thirdly, this path is just high level waypoitns. we break them down into smaller one
+
+            original_path_length=len(path.poses)
+            dense_path = Path()
+            dense_path.header.frame_id="map"
+
+            interval_length=0.8 # interval length between dense waypoints
+
+            for i in range(original_path_length-1):
+                sub_start = path.poses[i]
+                sub_goal = path.poses[i+1]
+                outarg=astar.solve_path(sub_start.pose.position,sub_goal.pose.position)
+                sub_path = outarg[1]
+                length_path=len(sub_path.poses)
+                poses=sub_path.poses
+                index_step=int((interval_length/astar.res))
+                extract_idx=np.ceil(np.arange(0,length_path,index_step)).astype('int')
+                poses=[poses[i] for i in extract_idx]
+                dense_path.poses.extend(poses)
+
+
+            allocated_paths.append(dense_path)
 
     else:
         rospy.logwarn('task or agents are not provided')
@@ -123,9 +154,10 @@ def paths_pub():
 ''' calculation server registration'''
 
 def service_callback(req):
+    global a_star
     if req.calculate:
         rospy.loginfo('calculating CBBA')
-        allocate_path()
+        allocate_path(a_star)
 
     else:
         rospy.loginfo('calculation was not requested')
@@ -274,6 +306,7 @@ if __name__=='__main__':
         state_receiver()
         '''
 
+        a_star.inflated_map_publish()
         task_marker_publish()
         agent_marker_publish()
 

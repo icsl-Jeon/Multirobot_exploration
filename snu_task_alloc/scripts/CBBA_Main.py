@@ -1,11 +1,11 @@
 from CBBA import *
 
-def CBBA_main(agents,tasks,Lt,connectivity_graph):
+def CBBA_main(agents,tasks,Lt,connectivity_graph,astar):
 
     # TODO FOR USER : CM (COMPATIBILITY MATRIX) IN CLASS CBBA
 
     # this costructor includes all the initilization
-    cbba=CBBA(agents,tasks,Lt,connectivity_graph)
+    cbba=CBBA(agents,tasks,Lt,connectivity_graph,astar)
     T=1 # current iteration
     lastTime=T-1 # time when something changed
     doneFlag=0
@@ -49,12 +49,15 @@ def CBBA_main(agents,tasks,Lt,connectivity_graph):
                 total_score+=cbba.scores[n,m]
             else :
                 break
-
+    print cbba.bids
     print ('total score : {}'.format(total_score))
     return cbba
 
 
-def CBBA_solve(task_positions,unit_positions):
+def CBBA_solve(task_positions,unit_positions,astar):
+
+    # star is required to compute local path with a star algorithm
+
     Nt=len(task_positions)
     Nu=len(unit_positions)
 
@@ -90,14 +93,14 @@ def CBBA_solve(task_positions,unit_positions):
         task_pos_y = task_positions[j].y
         task_pos_z = 0.0
         task_type = 0 # type
-        value = 100
+        value = 1000
         start_t = 0.0
         end_t = 100.0
         duration = 1
-        discount = 0.1
+        discount = 0.1 # original 0.1
 
         task_unit = task(idx=j, task_type=task_type, x=task_pos_x, y=task_pos_y, z=task_pos_z, start_t=start_t,
-                         end_t=end_t, task_value=100, duration=duration)
+                         end_t=end_t, discount=discount,task_value=value, duration=duration)
         task_list.append(task_unit)
 
     # connectivity graph
@@ -107,7 +110,7 @@ def CBBA_solve(task_positions,unit_positions):
     # CBBA SOLVE #
     ##############
 
-    cbba = CBBA_main(agent_list, task_list, Lt=10, connectivity_graph=connectivity_graph)
+    cbba = CBBA_main(agent_list, task_list, Lt=10, connectivity_graph=connectivity_graph,astar=astar)
     return cbba
 
 

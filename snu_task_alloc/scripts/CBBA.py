@@ -1,4 +1,5 @@
 import numpy as np
+from geometry_msgs.msg import Point
 
 # ---------- GLOBAL VARIABLE ----------------
 TASK_TYPE = np.array([0, 1])  # type = {rover,quadrotor}
@@ -35,11 +36,11 @@ class task:
 
 
 class CBBA:
-    def __init__(self, agents, tasks, Lt, connectivity_graph):
+    def __init__(self, agents, tasks, Lt, connectivity_graph,astar):
         self.agent_list = agents  # number of agent = Nu
         self.task_list = tasks  # number of tasks = Nt
         self.connectivity_graph = connectivity_graph  # communication graph (Nu x Nu numpy)
-
+        self.astar=astar
         # -------- PARAMETERS ------------
         self.Nu = len(self.agent_list)
         self.Nt = len(self.task_list)
@@ -166,6 +167,8 @@ class CBBA:
                                 score = outarg[0]
                                 minStart = outarg[1]
                                 maxStart = outarg[2]
+
+
                                 if minStart > maxStart:
                                     skip = True
                                     # infeasible path
@@ -190,32 +193,57 @@ class CBBA:
         self.bids[agent_idx] = np.copy(bids)  # update into the field in class
         return (bestIdxs, taskTimes, feasibility)
 
+
+    def distance_metric(self,mode,agent,task):
+        # input: mode = "Line / Astar"
+        # input pos: (x,y,z) tuple
+        if mode == 'Line':
+            return np.sqrt(np.power(agent.x- task.x, 2) +
+                    np.power(agent.y - task.y, 2) +
+                    np.power(agent.z - task.z, 2))
+
+        elif mode == 'Astar':
+            start_point=Point(); start_point.x=agent.x; start_point.y=agent.y
+            goal_point=Point(); goal_point.x=task.x; goal_point.y=task.y
+            outarg=self.astar.solve_path(start_point,goal_point)
+            dist=outarg[0]
+            # print dist
+            return dist
+            # CHECKPOINT
+        else:
+            print("Warning: unknown metric for distance")
+            return None
+
     def CalcScore(self, agent_idx, taskCur, taskPrev, timePrev, taskNext, timeNext):
         # INPUT
         # agent_idx = int
         # taskCur, taskPrev, taskNext = task class
         global AGENT_TYPE
         cur_agent = self.agent_list[agent_idx]
+        # metric='Line'
+        metric='Astar'
         if np.size(np.where(AGENT_TYPE == cur_agent.type)[0]):
             if (taskPrev==None):  # first task in path
                 # compute start time of the task
-                dt = np.sqrt(np.power(cur_agent.x - taskCur.x, 2) +
-                             np.power(cur_agent.y - taskCur.y, 2) +
-                             np.power(cur_agent.z - taskCur.z, 2)) / cur_agent.nom_vel
+
+                dt = self.distance_metric(metric,cur_agent,taskCur) / cur_agent.nom_vel
+
+                # dt = np.sqrt(np.power(cur_agent.x - taskCur.x, 2) +
+                #              np.power(cur_agent.y - taskCur.y, 2) +
+                #              np.power(cur_agent.z - taskCur.z, 2)) / cur_agent.nom_vel
                 minStart = max(taskCur.start_t, cur_agent.avail + dt)
 
             else:  # Not first task in path
-                dt = np.sqrt(np.power(taskPrev.x - taskCur.x, 2) +
-                             np.power(taskPrev.y - taskCur.y, 2) +
-                             np.power(taskPrev.z - taskCur.z, 2)) / cur_agent.nom_vel
+
+                dt = self.distance_metric(metric, taskPrev, taskCur) / cur_agent.nom_vel
+
                 minStart = max(taskCur.start_t, timePrev + taskPrev.duration + dt)
 
             if (taskNext==None):  # last task in path
                 maxStart = taskCur.end_t
             else:
-                dt = np.sqrt(np.power(taskNext.x - taskCur.x, 2) +
-                             np.power(taskNext.y - taskCur.y, 2) +
-                             np.power(taskNext.z - taskCur.z, 2)) / cur_agent.nom_vel
+                dt = self.distance_metric(metric, taskNext, taskCur) / cur_agent.nom_vel
+
                 maxStart = min(taskCur.end_t, timeNext - taskCur.duration - dt)
 
             # compute score
@@ -226,11 +254,18 @@ class CBBA:
             # not be used when comparing to optimal score.  Need to compute
             # real score of CBBA paths once CBBA algorithm has finished running
 
-            penalty = cur_agent.fuel * np.sqrt(np.power(cur_agent.x - taskCur.x, 2) +
-                                               np.power(cur_agent.y - taskCur.y, 2) +
-                                               np.power(cur_agent.z - taskCur.z, 2))
+
+            penalty = cur_agent.fuel * self.distance_metric(metric,cur_agent,taskCur)
+
+
+            # penalty =  self.distance_metric(metric, cur_agent, taskCur)
+
+            # penalty = cur_agent.fuel * np.sqrt(np.power(cur_agent.x - taskCur.x, 2) +
+            #                                    np.power(cur_agent.y - taskCur.y, 2) +
+            #                                    np.power(cur_agent.z - taskCur.z, 2))
 
             score = reward - penalty
+            print ("reward : %f , penalty : %f / min_start: %f / max_start: %f"%(reward,penalty,minStart,maxStart))
             return (score, minStart, maxStart)
 
         else:
